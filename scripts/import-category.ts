@@ -325,7 +325,12 @@ function parseInvestigatorReport(md: string): Partial<InvestigatorData> {
     data.strengths = strengthsSec
       .split('\n')
       .filter((l) => l.trim().startsWith('-'))
-      .map((l) => l.replace(/^-\s*\*\*[^*]+\*\*:?\s*/, '').replace(/^-\s*/, '').trim())
+      .map((l) => l
+        .replace(/^-\s*\*\*[^*]+\*\*:?\s*/, '')
+        .replace(/^-\s*/, '')
+        .replace(/\[SRC-[^\]]+\]/g, '')  // strip [SRC-xxx] citations
+        .trim()
+      )
       .filter(Boolean);
   }
 
@@ -335,7 +340,12 @@ function parseInvestigatorReport(md: string): Partial<InvestigatorData> {
     data.deficiencies = deficienciesSec
       .split('\n')
       .filter((l) => l.trim().startsWith('-'))
-      .map((l) => l.replace(/^-\s*\*\*[^*]+\*\*:?\s*/, '').replace(/^-\s*/, '').trim())
+      .map((l) => l
+        .replace(/^-\s*\*\*[^*]+\*\*:?\s*/, '')
+        .replace(/^-\s*/, '')
+        .replace(/\[SRC-[^\]]+\]/g, '')  // strip [SRC-xxx] citations
+        .trim()
+      )
       .filter(Boolean);
   }
 
