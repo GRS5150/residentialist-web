@@ -200,8 +200,9 @@ const SPEC_VOCAB: Record<string, string> = {
   moderate_porous_surface: 'Moderate — Porous Surface',
 };
 
-function translateSpecValue(value: string): string {
-  return SPEC_VOCAB[value] ?? value.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+function translateSpecValue(value: string | number | boolean): string {
+  const str = String(value);
+  return SPEC_VOCAB[str] ?? str.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function translateSpecName(key: string): string {
@@ -559,22 +560,34 @@ async function upsertSpecs(
   productId: string,
   specs: Record<string, string>
 ): Promise<void> {
-  // Delete existing specs and re-insert (simpler than per-key upsert)
+  const entries = Object.entries(specs);
+  if (entries.length === 0) return;
+
+  // DELETE + single batched INSERT — minimizes round trips to Supabase
   await pool.query(`DELETE FROM product_specs WHERE product_id = $1`, [productId]);
 
-  const entries = Object.entries(specs);
+  // Build a single multi-value INSERT: ($1,$2,$3,$4,$5),($1,$6,$7,$8,$9),...
+  const values: any[] = [];
+  const placeholders: string[] = [];
+  let paramIdx = 1;
+
   for (let i = 0; i < entries.length; i++) {
     const [key, value] = entries[i];
     const specName = translateSpecName(key);
     const specValue = translateSpecValue(value);
     const isKey = KEY_SPEC_KEYS.has(key);
 
-    await pool.query(
-      `INSERT INTO product_specs (product_id, spec_name, spec_value, display_order, is_key_spec)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [productId, specName, specValue, i, isKey]
+    placeholders.push(
+      `($${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++})`
     );
+    values.push(productId, specName, specValue, i, isKey);
   }
+
+  await pool.query(
+    `INSERT INTO product_specs (product_id, spec_name, spec_value, display_order, is_key_spec)
+     VALUES ${placeholders.join(', ')}`,
+    values
+  );
 }
 
 // ─── Brand extractor ──────────────────────────────────────────────────────────
