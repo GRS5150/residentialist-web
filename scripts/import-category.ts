@@ -367,11 +367,20 @@ function parseInvestigatorReport(md: string): Partial<InvestigatorData> {
 
   // Corporate Outlook — "Stable — rationale text"
   const outlookSec = extractSection('Corporate Outlook');
+  const validOutlooks = ['Strong', 'Stable', 'Conditional', 'Negative'];
   if (outlookSec) {
     const dashIdx = outlookSec.indexOf('—');
     if (dashIdx > -1) {
-      data.outlook = outlookSec.substring(0, dashIdx).trim();
-      data.outlook_rationale = stripCitations(outlookSec.substring(dashIdx + 1));
+      const candidate = outlookSec.substring(0, dashIdx).trim();
+      const matched = validOutlooks.find(v => v.toLowerCase() === candidate.toLowerCase());
+      if (matched) {
+        data.outlook = matched;
+        data.outlook_rationale = stripCitations(outlookSec.substring(dashIdx + 1));
+      } else {
+        // Pre-dash text is not a valid enum — treat whole section as rationale
+        data.outlook = null;
+        data.outlook_rationale = stripCitations(outlookSec);
+      }
     } else {
       // Try to match known outlook values
       const outlookMatch = outlookSec.match(/^(Strong|Stable|Conditional|Negative)/i);
@@ -379,6 +388,7 @@ function parseInvestigatorReport(md: string): Partial<InvestigatorData> {
         data.outlook = outlookMatch[1];
         data.outlook_rationale = stripCitations(outlookSec.replace(outlookMatch[1], ''));
       } else {
+        data.outlook = null;
         data.outlook_rationale = stripCitations(outlookSec);
       }
     }
@@ -395,7 +405,7 @@ function parseInvestigatorReport(md: string): Partial<InvestigatorData> {
 interface ConfigProduct {
   name: string;
   slug: string;
-  tier: number;
+  tier: number | string;
   target: number;
   sub_type?: string;
   axis_scores?: { quality: number; durability: number; performance: number };
@@ -478,7 +488,11 @@ async function upsertProduct(
 ): Promise<string> {
   // Merge config data with investigator data — investigator wins for text fields
   const compositeScore = configProduct.target;
-  const tier = configProduct.tier ?? tierFromScore(compositeScore);
+  // Normalize tier: handle both numeric (1) and string ("Tier 1") formats
+  const rawTier = configProduct.tier;
+  const tier: number = typeof rawTier === 'string'
+    ? (parseInt(rawTier.replace(/[^0-9]/g, '')) || tierFromScore(compositeScore))
+    : (rawTier ?? tierFromScore(compositeScore));
   const tierLabel = TIER_LABELS[tier] ?? 'Unknown';
 
   // Axis scores: prefer config (0-100 normalized) > investigator > null
