@@ -140,6 +140,118 @@ export interface Dealer {
   updated_at: string;
 }
 
+// ─── Sub-type display name mapping ──────────────────────────────────────────
+// Maps raw database sub_type values to human-readable display strings.
+// Add entries here as new categories with sub-types are imported.
+
+export const SUB_TYPE_DISPLAY_NAMES: Record<string, string> = {
+  // Sinks
+  kitchen_stainless: 'Kitchen — Stainless Steel',
+  kitchen_cast_iron: 'Kitchen — Cast Iron',
+  kitchen_fireclay: 'Kitchen — Fireclay',
+  kitchen_composite: 'Kitchen — Composite',
+  bathroom_vitreous_china: 'Bathroom — Vitreous China',
+  bathroom_ceramic: 'Bathroom — Ceramic',
+  bathroom_cast_iron: 'Bathroom — Cast Iron',
+  bathroom_fireclay: 'Bathroom — Fireclay',
+  laundry_utility: 'Laundry / Utility',
+  bar_prep: 'Bar / Prep',
+  // Tile
+  tile_porcelain: 'Porcelain Tile',
+  tile_ceramic: 'Ceramic Tile',
+  tile_natural_stone: 'Natural Stone',
+  tile_glass: 'Glass Tile',
+  tile_cement: 'Cement Tile',
+  floor_tile: 'Floor Tile',
+  wall_tile: 'Wall Tile',
+  floor_and_wall: 'Floor & Wall Tile',
+  // Toilets
+  toilet_one_piece: 'One-Piece',
+  toilet_two_piece: 'Two-Piece',
+  toilet_wall_hung: 'Wall-Hung',
+  toilet_smart: 'Smart / Bidet',
+  // Faucets
+  kitchen_faucet: 'Kitchen Faucet',
+  bathroom_faucet: 'Bathroom Faucet',
+  shower_faucet: 'Shower / Tub Faucet',
+  bar_faucet: 'Bar / Prep Faucet',
+  utility_faucet: 'Utility Faucet',
+  // Cabinets
+  cabinets_base: 'Base Cabinets',
+  cabinets_wall: 'Wall Cabinets',
+  cabinets_full_kitchen: 'Full Kitchen System',
+  cabinets_bathroom_vanity: 'Bathroom Vanity',
+  // Countertops
+  countertop_quartz: 'Quartz',
+  countertop_granite: 'Granite',
+  countertop_quartzite: 'Quartzite',
+  countertop_marble: 'Marble',
+  countertop_dekton: 'Dekton / Ultra-Compact',
+  countertop_laminate: 'Laminate',
+  countertop_solid_surface: 'Solid Surface',
+  countertop_butcher_block: 'Butcher Block',
+  countertop_concrete: 'Concrete',
+  // Hardwood flooring
+  hardwood_solid: 'Solid Hardwood',
+  hardwood_engineered: 'Engineered Hardwood',
+  hardwood_prefinished: 'Prefinished Hardwood',
+  hardwood_site_finished: 'Site-Finished Hardwood',
+  // Windows
+  window_double_hung: 'Double-Hung Window',
+  window_casement: 'Casement Window',
+  window_sliding: 'Sliding Window',
+  window_awning: 'Awning Window',
+  window_picture: 'Picture Window',
+  window_bay_bow: 'Bay / Bow Window',
+  window_skylight: 'Skylight',
+  // Exterior doors
+  door_entry: 'Entry Door',
+  door_patio: 'Patio Door',
+  door_sliding_glass: 'Sliding Glass Door',
+  door_french: 'French Door',
+  door_storm: 'Storm Door',
+  // HVAC
+  hvac_central_air: 'Central Air System',
+  hvac_heat_pump: 'Heat Pump',
+  hvac_mini_split: 'Mini-Split',
+  hvac_furnace: 'Furnace',
+  hvac_boiler: 'Boiler',
+  hvac_air_handler: 'Air Handler',
+  // Refrigerators
+  refrigerator_french_door: 'French Door Refrigerator',
+  refrigerator_side_by_side: 'Side-by-Side Refrigerator',
+  refrigerator_bottom_freezer: 'Bottom-Freezer Refrigerator',
+  refrigerator_top_freezer: 'Top-Freezer Refrigerator',
+  refrigerator_column: 'Column Refrigerator',
+  refrigerator_counter_depth: 'Counter-Depth Refrigerator',
+  // Water heaters
+  water_heater_tank_gas: 'Tank — Gas',
+  water_heater_tank_electric: 'Tank — Electric',
+  water_heater_tankless_gas: 'Tankless — Gas',
+  water_heater_tankless_electric: 'Tankless — Electric',
+  water_heater_heat_pump: 'Heat Pump Water Heater',
+  // Lighting control
+  lighting_dimmer: 'Smart Dimmer',
+  lighting_switch: 'Smart Switch',
+  lighting_system: 'Full Lighting System',
+  // Motorized shades
+  shades_roller: 'Roller Shades',
+  shades_cellular: 'Cellular Shades',
+  shades_roman: 'Roman Shades',
+  shades_venetian: 'Venetian / Horizontal Blinds',
+  shades_panel: 'Panel Track Shades',
+};
+
+/**
+ * Converts a raw sub_type database value to a human-readable display string.
+ * Falls back to title-casing the raw value if no mapping exists.
+ */
+export function formatSubType(subType: string | null): string | null {
+  if (!subType) return null;
+  return SUB_TYPE_DISPLAY_NAMES[subType] ??
+    subType.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 // ─── Tier definitions ─────────────────────────────────────────────────────────
 
 export const TIER_LABELS: Record<number, string> = {

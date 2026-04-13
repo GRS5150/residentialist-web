@@ -257,6 +257,15 @@ const KEY_SPEC_KEYS = new Set([
 
 // ─── Markdown parser ──────────────────────────────────────────────────────────
 
+/**
+ * Strips internal evidence markers like [SRC-002, SRC-005] from any string.
+ * These are investigator-only references and must never appear in public text.
+ */
+function stripCitations(text: string | null | undefined): string | null {
+  if (!text) return null;
+  return text.replace(/\[SRC-\d+(?:,\s*SRC-\d+)*\]/g, '').replace(/\s{2,}/g, ' ').trim();
+}
+
 interface InvestigatorData {
   name: string;
   composite_score: number;
@@ -317,7 +326,7 @@ function parseInvestigatorReport(md: string): Partial<InvestigatorData> {
   }
 
   // Company Background
-  data.company_background = extractSection('Company Background');
+  data.company_background = stripCitations(extractSection('Company Background'));
 
   // Strengths — parse bullet list
   const strengthsSec = extractSection('Strengths');
@@ -325,12 +334,11 @@ function parseInvestigatorReport(md: string): Partial<InvestigatorData> {
     data.strengths = strengthsSec
       .split('\n')
       .filter((l) => l.trim().startsWith('-'))
-      .map((l) => l
-        .replace(/^-\s*\*\*[^*]+\*\*:?\s*/, '')
-        .replace(/^-\s*/, '')
-        .replace(/\[SRC-[^\]]+\]/g, '')  // strip [SRC-xxx] citations
-        .trim()
-      )
+      .map((l) => stripCitations(
+        l
+          .replace(/^-\s*\*\*[^*]+\*\*:?\s*/, '')
+          .replace(/^-\s*/, '')
+      ) ?? '')
       .filter(Boolean);
   }
 
@@ -340,22 +348,21 @@ function parseInvestigatorReport(md: string): Partial<InvestigatorData> {
     data.deficiencies = deficienciesSec
       .split('\n')
       .filter((l) => l.trim().startsWith('-'))
-      .map((l) => l
-        .replace(/^-\s*\*\*[^*]+\*\*:?\s*/, '')
-        .replace(/^-\s*/, '')
-        .replace(/\[SRC-[^\]]+\]/g, '')  // strip [SRC-xxx] citations
-        .trim()
-      )
+      .map((l) => stripCitations(
+        l
+          .replace(/^-\s*\*\*[^*]+\*\*:?\s*/, '')
+          .replace(/^-\s*/, '')
+      ) ?? '')
       .filter(Boolean);
   }
 
   // What You Should Know = summary
-  data.summary = extractSection('What You Should Know');
+  data.summary = stripCitations(extractSection('What You Should Know'));
 
   // Platform Disclosure
   const platformSec = extractSection('Platform Disclosure');
   if (platformSec && !platformSec.toLowerCase().includes('not applicable')) {
-    data.platform_disclosure = platformSec;
+    data.platform_disclosure = stripCitations(platformSec);
   }
 
   // Corporate Outlook — "Stable — rationale text"
@@ -364,21 +371,21 @@ function parseInvestigatorReport(md: string): Partial<InvestigatorData> {
     const dashIdx = outlookSec.indexOf('—');
     if (dashIdx > -1) {
       data.outlook = outlookSec.substring(0, dashIdx).trim();
-      data.outlook_rationale = outlookSec.substring(dashIdx + 1).trim();
+      data.outlook_rationale = stripCitations(outlookSec.substring(dashIdx + 1));
     } else {
       // Try to match known outlook values
       const outlookMatch = outlookSec.match(/^(Strong|Stable|Conditional|Negative)/i);
       if (outlookMatch) {
         data.outlook = outlookMatch[1];
-        data.outlook_rationale = outlookSec.replace(outlookMatch[1], '').trim();
+        data.outlook_rationale = stripCitations(outlookSec.replace(outlookMatch[1], ''));
       } else {
-        data.outlook_rationale = outlookSec;
+        data.outlook_rationale = stripCitations(outlookSec);
       }
     }
   }
 
   // Repair Economics / Warranty (mapped to warranty_summary)
-  data.warranty_summary = extractSection('Repair Economics');
+  data.warranty_summary = stripCitations(extractSection('Repair Economics'));
 
   return data;
 }
@@ -649,13 +656,19 @@ async function importCategory(categorySlug: string): Promise<void> {
 
     const productId = await upsertProduct(categoryId, categorySlug, product, investigator);
 
-    // Upsert specs if present in config
+    // Upsert specs if present in config — gracefully skip if absent or malformed
     if (product.specs && Object.keys(product.specs).length > 0) {
-      await upsertSpecs(productId, product.specs);
+      try {
+        await upsertSpecs(productId, product.specs);
+      } catch (specErr) {
+        warnings++;
+        console.warn(`  [WARN] Specs upsert failed for ${product.slug}: ${(specErr as Error).message}`);
+      }
     }
 
     console.log(
       `  ✓ ${product.name} — Score: ${product.target}, Tier ${product.tier}` +
+      (product.specs ? ` (${Object.keys(product.specs).length} specs)` : ' [no specs]') +
       (mdRaw ? '' : ' [no investigator report]')
     );
     imported++;

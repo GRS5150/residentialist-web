@@ -5,6 +5,7 @@ import {
   getRelatedProducts,
   getAllProductSlugs,
 } from '@/lib/queries';
+import { formatSubType } from '@/lib/types';
 import ScoreDisplay from '@/components/ScoreDisplay';
 import AxisBreakdown from '@/components/AxisBreakdown';
 import TierBadge from '@/components/TierBadge';
@@ -54,9 +55,7 @@ export default async function ProductPage({ params }: Props) {
 
   const relatedProducts = await getRelatedProducts(product.category_id, product.id);
   const category = product.category;
-
-  const keySpecs = product.specs.filter((s) => s.is_key_spec);
-  const otherSpecs = product.specs.filter((s) => !s.is_key_spec);
+  const displaySubType = formatSubType(product.sub_type);
 
   // JSON-LD structured data
   const productSchema = {
@@ -111,38 +110,32 @@ export default async function ProductPage({ params }: Props) {
         ]}
       />
 
-      {/* 2. Product header */}
+      {/* 2. Product header — score ring only on mobile here; sidebar shows it on desktop */}
       <div className="mt-6 pb-6 border-b border-gray-200">
-        <div className="flex items-start gap-6">
-          {/* Score ring — left col on desktop */}
-          <div className="flex-shrink-0 hidden sm:block">
-            <ScoreDisplay score={product.composite_score} size="lg" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-gray-400 uppercase tracking-wider">
+            {product.brand}
+          </p>
+          <h1 className="mt-1 text-2xl sm:text-3xl font-bold text-gray-900 leading-tight">
+            {product.name}
+          </h1>
+          {displaySubType && (
+            <p className="mt-1 text-sm text-gray-500">{displaySubType}</p>
+          )}
+
+          {/* Mobile: score ring + badges inline under title (hidden at lg, sidebar takes over) */}
+          <div className="flex items-center gap-4 mt-4 lg:hidden">
+            <ScoreDisplay score={product.composite_score} size="md" />
+            <div>
+              <TierBadge tier={product.tier} />
+              {product.award && <div className="mt-1.5"><AwardBadge award={product.award} /></div>}
+            </div>
           </div>
 
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-400 uppercase tracking-wider">
-              {product.brand}
-            </p>
-            <h1 className="mt-1 text-2xl sm:text-3xl font-bold text-gray-900 leading-tight">
-              {product.name}
-            </h1>
-            {product.sub_type && (
-              <p className="mt-1 text-sm text-gray-500">{product.sub_type}</p>
-            )}
-
-            {/* Mobile score */}
-            <div className="flex items-center gap-4 mt-4 sm:hidden">
-              <ScoreDisplay score={product.composite_score} size="md" />
-              <div>
-                <TierBadge tier={product.tier} />
-                {product.award && <div className="mt-1.5"><AwardBadge award={product.award} /></div>}
-              </div>
-            </div>
-
-            <div className="hidden sm:flex flex-wrap gap-2 mt-3">
-              <TierBadge tier={product.tier} />
-              {product.award && <AwardBadge award={product.award} />}
-            </div>
+          {/* Desktop: badges only — score ring lives in sidebar */}
+          <div className="hidden lg:flex flex-wrap gap-2 mt-3">
+            <TierBadge tier={product.tier} />
+            {product.award && <AwardBadge award={product.award} />}
           </div>
         </div>
       </div>
@@ -316,7 +309,7 @@ export default async function ProductPage({ params }: Props) {
 
         {/* Sidebar — desktop right column */}
         <div className="lg:col-span-1 space-y-6">
-          {/* Score card */}
+          {/* Score card — score ring lives here only, not duplicated in header */}
           <div className="bg-white border border-gray-200 rounded-lg p-6 text-center">
             <p className="text-xs text-gray-400 uppercase tracking-wider mb-3">
               Residentialist Score
@@ -327,23 +320,6 @@ export default async function ProductPage({ params }: Props) {
               {product.award && <div><AwardBadge award={product.award} /></div>}
             </div>
           </div>
-
-          {/* Quick specs */}
-          {keySpecs.length > 0 && (
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
-              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
-                Key Specifications
-              </h3>
-              <dl className="divide-y divide-gray-100">
-                {keySpecs.map((spec) => (
-                  <div key={spec.id} className="flex flex-col py-2">
-                    <dt className="text-xs text-gray-400">{spec.spec_name}</dt>
-                    <dd className="text-xs font-semibold text-gray-900 mt-0.5">{spec.spec_value}</dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
-          )}
         </div>
       </div>
 
