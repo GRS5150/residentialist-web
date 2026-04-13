@@ -44,22 +44,22 @@ export default async function HomePage() {
       </section>
 
       {/* Stats bar */}
-      <section className="bg-gray-900 text-white">
+      <section className="bg-gray-50 border-b border-gray-200">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-5">
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
-              <p className="text-2xl font-bold tabular-nums">{categories.length}</p>
-              <p className="text-xs text-gray-400 mt-0.5 uppercase tracking-wider">Categories</p>
+              <p className="text-2xl font-bold tabular-nums text-gray-900">{categories.length}</p>
+              <p className="text-xs text-gray-500 mt-0.5 uppercase tracking-wider">Categories</p>
             </div>
             <div>
-              <p className="text-2xl font-bold tabular-nums">
+              <p className="text-2xl font-bold tabular-nums text-gray-900">
                 {categories.reduce((sum, c) => sum + c.product_count, 0)}
               </p>
-              <p className="text-xs text-gray-400 mt-0.5 uppercase tracking-wider">Scored Products</p>
+              <p className="text-xs text-gray-500 mt-0.5 uppercase tracking-wider">Scored Products</p>
             </div>
             <div>
-              <p className="text-2xl font-bold">0</p>
-              <p className="text-xs text-gray-400 mt-0.5 uppercase tracking-wider">Paid Placements</p>
+              <p className="text-2xl font-bold text-gray-900">0</p>
+              <p className="text-xs text-gray-500 mt-0.5 uppercase tracking-wider">Paid Placements</p>
             </div>
           </div>
         </div>
