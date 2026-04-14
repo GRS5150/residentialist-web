@@ -28,24 +28,54 @@ export const pool: Pool =
     ? createPool()
     : (global._pgPool ??= createPool());
 
+const RETRY_DELAY_MS = 500;
+
+async function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function query<T = any>(
   text: string,
   params?: any[]
 ): Promise<T[]> {
-  // Use a fresh client per query — required for Supabase session pooler
-  const client = await pool.connect();
-  try {
-    const result = await client.query(text, params);
-    return result.rows as T[];
-  } catch (err) {
-    // Log the query that failed for debugging
-    console.error('[db] query error:', (err as Error).message);
-    console.error('[db] failed query:', text.slice(0, 100));
-    throw err;
-  } finally {
-    // Always release — this is what returns the connection to the pool
-    client.release(true); // true = disconnect, don't keep in pool
+  // Retry once on transient connection errors (e.g. Supabase pooler drops
+  // during high-concurrency static generation with 100+ pages).
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    let client;
+    try {
+      client = await pool.connect();
+      const result = await client.query(text, params);
+      return result.rows as T[];
+    } catch (err) {
+      const msg = (err as Error).message ?? '';
+      const isTransient =
+        msg.includes('Connection terminated unexpectedly') ||
+        msg.includes('connection timeout') ||
+        msg.includes('ECONNRESET') ||
+        msg.includes('EPIPE') ||
+        msg.includes('read ECONNRESET');
+
+      if (attempt === 1 && isTransient) {
+        console.warn(
+          `[db] transient error on attempt ${attempt}, retrying in ${RETRY_DELAY_MS}ms:`,
+          msg
+        );
+        await sleep(RETRY_DELAY_MS);
+        continue; // retry
+      }
+
+      // Non-transient or second failure — log and rethrow
+      console.error('[db] query error:', msg);
+      console.error('[db] failed query:', text.slice(0, 100));
+      throw err;
+    } finally {
+      if (client) {
+        client.release(true); // true = disconnect, don't keep in pool
+      }
+    }
   }
+  // TypeScript: unreachable but required
+  throw new Error('[db] query failed after retries');
 }
 
 export async function queryOne<T = any>(
